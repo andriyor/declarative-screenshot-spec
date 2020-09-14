@@ -6,6 +6,9 @@ const {chromium} = require('playwright');
 const {createCanvas, loadImage} = require('canvas');
 const slugify = require('@sindresorhus/slugify');
 
+const {arrow} = require("./utils/canvas-arrow");
+const {getStart, getElementCoordinate} = require("./utils/coordinate");
+
 (async () => {
   const browser = await chromium.launch({headless: false});
   const page = await browser.newPage();
@@ -26,11 +29,11 @@ const slugify = require('@sindresorhus/slugify');
     const {width, height} = sizeOf(tempFileName);
     const canvas = createCanvas(width, height);
     const context = canvas.getContext('2d');
-  
+    
     for (const object of pageConfig.drawObjects) {
       if (object.type === 'rect') {
         context.fillRect(0, 0, width, height)
-  
+        
         const image = await loadImage(tempFileName);
         context.drawImage(image, 0, 0, width, height)
         context.beginPath();
@@ -39,15 +42,29 @@ const slugify = require('@sindresorhus/slugify');
         context.rect(rect.x, rect.y, rect.width, rect.height);
         context.stroke();
       }
+      
+      if (object.type === 'arrow') {
+        const [startX, startY] = getStart(object.from, width, height);
+        const [endX, endY] = getElementCoordinate(object.to, rect);
+        context.fillStyle = object.fillStyle;
+        context.beginPath();
+        arrow(context, startX, startY, endX, endY, [3, 3, -10, 2, -10, 5]);
+        context.fill();
+      }
     }
     
     const buffer = canvas.toBuffer('image/png');
-    await sharp(buffer).extract({
-      left: Math.round(rect.x) - pageConfig.padding,
-      top: Math.round(rect.y) - pageConfig.padding,
-      width: Math.round(rect.width) + (pageConfig.padding * 2),
-      height: Math.round(rect.height) + (pageConfig.padding * 2)
-    }).toFile(`${slugify(pageConfig.name)}.png`);
+    const outputFileName = `${slugify(pageConfig.name)}.png`;
+    if (pageConfig.padding) {
+      await sharp(buffer).extract({
+        left: Math.round(rect.x) - pageConfig.padding,
+        top: Math.round(rect.y) - pageConfig.padding,
+        width: Math.round(rect.width) + (pageConfig.padding * 2),
+        height: Math.round(rect.height) + (pageConfig.padding * 2)
+      }).toFile(outputFileName);
+    } else {
+      fs.writeFileSync(outputFileName, buffer)
+    }
     
     await fs.unlinkSync(tempFileName);
   }
