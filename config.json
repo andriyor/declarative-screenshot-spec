@@ -1,0 +1,17 @@
+{
+  "pages": [
+    {
+      "name": "github registration",
+      "url": "https://github.com",
+      "selector": "main .jumbotron-codelines .rounded-1",
+      "padding": 20,
+      "drawObjects": [
+        {
+          "type": "rect",
+          "lineWidth": 6,
+          "strokeStyle": "red"
+        }
+      ]
+    }
+  ]
+}
